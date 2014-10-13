@@ -1,0 +1,24 @@
+{
+    "name": "thalinode",
+    "version": "0.0.0",
+    "private": true,
+    "scripts": {
+    "start": "node ./bin/www"
+    },
+    "dependencies": {
+        "morgan": "~1.3.0",
+        "debug": "~2.0.0",
+        "jade": "~1.6.0",
+        "openssl-wrapper": "*",
+        "q": "*",
+        "express": "*",
+        "pouchdb": "*",
+        "express-pouchdb": "*"
+    },
+    "devDependencies": {
+        "mocha":"*",
+        "chai": "*",
+        "chai-as-promised": "*",
+        "node-forge": "*"
+    }
+}

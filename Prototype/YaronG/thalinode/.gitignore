@@ -1,0 +1,5 @@
+_users/
+-session-_users/
+_replicator/
+node_modules/
+pouch__all_dbs__/

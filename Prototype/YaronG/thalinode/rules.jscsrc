@@ -1,0 +1,6 @@
+{ "preset": "jquery",
+    "excludeFiles":
+    [ "node_modules/**"
+        , "coverage"
+    ]
+}
