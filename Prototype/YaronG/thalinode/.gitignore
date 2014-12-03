@@ -3,3 +3,6 @@ _users/
 _replicator/
 node_modules/
 pouch__all_dbs__/
+bin/
+config.json
+localNPM/
