@@ -6,3 +6,8 @@ pouch__all_dbs__/
 bin/
 config.json
 localNPM/
+localNPM-mrview-*
+profile
+testDB*
+v8.log
+pouch__all_dbs__2/
