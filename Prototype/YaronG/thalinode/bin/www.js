@@ -2,306 +2,114 @@
 
 "use strict";
 
-var debug = require("debug")("thalinode"),
-    morgan = require('morgan'),
-    express = require("express"),
-    app = express(),
-    PouchDB = require("pouchdb"),
-    cryptoUtilities = require("../lib/crypto-utilities.js"),
-    localNpmDB = new PouchDB("localNPM"),
-    skimdb = "https://skimdb.npmjs.com/registry",
-    //skimdb = "http://skimdb.iriscouch.com/registry",
-    request = require('requestretry'),
-    remoteNpmDB = new PouchDB(skimdb, { ajax: {gzip: true, pool: {maxSockets: 15},
-        timeout: 5 * 60 * 1000, maximumWait: 5 * 60 * 1000, forever: false, maxAttempts: 10, retryDelay: 1000,
-        retryStrategy: request.RetryStrategies.HTTPOrNetworkError}}),
-    http = require("http"),
-    https = require("https"),
-    Promise = require("bluebird"),
-    S = require("string");
+var morgan = require('morgan');
+var express = require("express");
+var app = express();
+var PouchDB = require("pouchdb");
+var expressPouchDB = require("express-pouchdb");
+var localNpmDB = new PouchDB("localNPM");
+var _ = require("underscore");
+var Immutable = require("immutable");
 
-function sync() {
-    var pouchEvent = PouchDB.replicate(remoteNpmDB, localNpmDB, {live: false, batch_size: 1000, retry: true,
-        retries: 10000})
-        .on('change', function(info) {
-            debug("Change - " + JSON.stringify(info));
-        })
-        .on('complete', function(info) {
-            debug("Complete - " + JSON.stringify(info) );
-        })
-        .on('uptodate', function(info) {
-            debug("uptodate - " + JSON.stringify(info));
-        })
-        .on('error', function(err) {
-            debug("error - " + JSON.stringify(err));
-        });
-}
 
-//localNpmDB.info().then(function(value) {debug("localNpmDB - " + JSON.stringify(value));});
+app.use(morgan("combined"));
+app.use("/", expressPouchDB(PouchDB));
+app.listen(3000);
 
-// Let's create an index with just a map that outputs as the key the _id of the input record
-// and the value will be the latest version. We'll calculate that by looking for dist-tags/latest and then
-// using that value in versions and output the specific version data
-function mapToLatestVersion(doc, emit) {
-    if (!doc["dist-tags"] || !doc["dist-tags"].latest) {
-        console.log("No latest for " + doc._id);
-        return;
-    }
+//var debug = require("debug")("thalinode"),
 
-    var latestVersion = doc["dist-tags"].latest;
+//    cryptoUtilities = require("../lib/crypto-utilities.js"),
+//    skimdb = "https://skimdb.npmjs.com/registry",
+//    //skimdb = "http://skimdb.iriscouch.com/registry",
+//    request = require('requestretry'),
+//    remoteNpmDB = new PouchDB(skimdb, { ajax: {gzip: true, pool: {maxSockets: 15},
+//        timeout: 5 * 60 * 1000, maximumWait: 5 * 60 * 1000, forever: false, maxAttempts: 10, retryDelay: 1000,
+//        retryStrategy: request.RetryStrategies.HTTPOrNetworkError}}),
+//    http = require("http"),
+//    https = require("https"),
+//    Promise = require("bluebird"),
+//    S = require("string"),
+//    url = require("url"),
+//    goodDocIndexDb = new PouchDB("goodDocIndexDb"),
 
-    if (!doc.versions || !doc.versions[latestVersion]) {
-        console.log("No latest version for " + doc._id);
-        return;
-    }
+//    rp = require('request-promise');
+//
+//var gitHubIdForUserAgent = "yaronyg";
+//
 
-    emit(doc._id, doc.versions[latestVersion]);
-}
+//
+//var entriesWithGypFile = [];
+//var entriesWithInstallScript = [];
+//var entriesWithInstallScriptMentioningGyp = [];
+//
+//function localGypCount() {
+//    localNpmDB.query('goodDocIndex')
+//    .then(function(docs) {
+//        docs.rows.forEach(function(doc) {
+//            var value = doc.value;
+//            if (value.gypfile) {
+//                entriesWithGypFile.push(doc.key);
+//            }
+//
+//            if (value.scripts && value.scripts.install) {
+//                entriesWithInstallScript.push(doc.key);
+//                if (value.scripts.install.indexOf("gyp") > -1) {
+//                    entriesWithInstallScriptMentioningGyp.push(doc.key);
+//                }
+//            }
+//        });
+//        console.log("Total entries = " + docs.rows.length);
+//        console.log("Total entries with Gyp File = " + entriesWithGypFile.length);
+//        console.log("Total entries with install script = " + entriesWithInstallScript.length);
+//        console.log("Total entries with install script mentioning gyp = " + entriesWithInstallScriptMentioningGyp.length);
+//        console.log("Size of intersection of install script and gyp file = " +
+//        _.intersection(entriesWithGypFile, entriesWithInstallScript).length);
+//        console.log("Size of intersection of install script mentioning gyp and gyp file = " +
+//        _.intersection(entriesWithGypFile, entriesWithInstallScriptMentioningGyp).length);
+//        console.log("Union of entries with gyp file and install script = " +
+//        _.union(entriesWithGypFile, entriesWithInstallScript).length);
+//        console.log("Union of entries with gyp file and install script mentioning gyp = " +
+//        _.union(entriesWithGypFile, entriesWithInstallScriptMentioningGyp).length);
+//
+//        //var allLocalGypIds =
+//        //    _.union(entriesWithGypFile, entriesWithInstallScript, entriesWithInstallScriptMentioningGyp);
+//        //
+//        //var checkForGitHub = docs.rows.map(function(doc) {
+//        //    if (allLocalGypIds[doc.key]) {
+//        //        var id = doc.key;
+//        //        var value = doc.value;
+//        //        if (value.repository && value.repository.type === "git" && value.repository.url &&
+//        //            value.repository.url.indexOf("github") > -1) {
+//        //            return getFromGitMemoize(id, value.repository.url);
+//        //        }
+//        //    }
+//        //
+//        //    return Promise.resolve();
+//        //});
+//
+//        //return Promise.all(checkForGitHub)
+//        //.then(function(results) {
+//        //    var cleanResults = _.compact(results);
+//        //    console.log("Number of entries claiming to be in Github " + results.length);
+//        //    var countEmUp = _.reduce(cleanResults, function(memo, doc) {
+//        //        if (memo[doc.tag]) {
+//        //            ++memo[doc.tag];
+//        //        } else {
+//        //            memo[doc.tag] = 1;
+//        //        }
+//        //    }, {});
+//        //    console.log("Github counts: " + countEmUp);
+//        //});
+//    });
+//}
+//
+//localGypCount();
 
-function countEntryTypes() {
-    var results = {};
 
-    function countBrokenEntries(doc, emit) {
-        function record(tag) {
-            if (results[tag] === undefined) {
-                results[tag] = 0;
-            } else {
-                ++results[tag];
-            }
-        }
-        if (!doc["dist-tags"]) {
-            if (doc.time && doc.time.unpublished) {
-                record("no-dist-tags-unpublished");
-            } else {
-                record("no-dist-tags-value");
-            }
-            return;
-        }
 
-        if (!doc["dist-tags"].latest) {
-            if (doc.time && doc.time.unpublished) {
-                record("no-dist-tags-latest-unpublished");
-            } else {
-                record("no-dist-tags-latest");
-            }
-            return;
-        }
 
-        var latestVersion = doc["dist-tags"].latest;
 
-        if (!doc.versions) {
-            record("no-versions-value");
-            return;
-        }
-
-        if (!doc.versions[latestVersion]) {
-            record("no-latest-version");
-            return;
-        }
-
-        record("good-doc");
-    }
-
-    localNpmDB.query({map: countBrokenEntries}, {reduce: false, include_docs: true})
-        .then(function(output) {
-            console.log(results);
-        })
-        .catch(function(err) {
-            console.log("Error: " + err);
-        });
-}
-
-var goodDocIndex = {
-    _id: '_design/goodDocIndex',
-    views: {
-        'goodDocIndex': {
-            map: function(doc) {
-                if (!doc["dist-tags"] || !doc["dist-tags"].latest) {
-//                    console.log("No latest for " + doc._id);
-                    return;
-                }
-
-                var latestVersion = doc["dist-tags"].latest;
-
-                if (!doc.versions || !doc.versions[latestVersion]) {
-//                    console.log("No latest version for " + doc._id);
-                    return;
-                }
-
-                emit(doc._id, doc.versions[latestVersion]);
-            }.toString()
-        }
-    }
-};
-
-function getFromGit(url, resolve, reject) {
-    var splitUrl = url.split("/");
-    var pathParts = [];
-    var pathPartsIndex = 1;
-    for (var i = splitUrl.length - 1; i >= 0 && pathPartsIndex >= 0; --i) {
-        if (splitUrl[i]) {
-            var pathSegment = S(splitUrl[i]);
-            if (pathPartsIndex === 1) {
-                pathSegment = pathSegment.chompRight(".git");
-            }
-            pathParts[pathPartsIndex] = pathSegment.s;
-            --pathPartsIndex;
-        }
-    }
-
-    if (pathParts.length === 2) {
-        var gitHubUrl = "https://api.github.com/repos/" + pathParts[0] + "/" + pathParts[1] + "/contents/";
-        https.get(gitHubUrl,
-            function (res) {
-                if (res.statusCode === 403) {
-                    // Github seems to use this for properly formatted requests that point at nothing
-                    resolve(false);
-                }
-
-                if (res.statusCode !== 200) {
-                    reject("Status code was " + res.statusCode + "for url " + url);
-                    return;
-                }
-                var responseBody = "";
-                res.setEncoding('utf8');
-                res.on('data', function (chunk) {
-                    responseBody += chunk;
-                });
-                res.on('end', function () {
-                    var output = JSON.parse(responseBody);
-                    output.forEach(function (entry) {
-                        if (S(entry.name).endsWith(".gyp")) {
-                            resolve(true);
-                        }
-                    });
-                    resolve(false);
-                });
-            }).on('error', function (err) {
-                reject("Http error on git - " + err.message);
-            });
-    } else {
-        reject("Bad value = " + url);
-    }
-}
-
-function designDoc(db) {
-    var startTime;
-    db.get('_design/goodDocIndex').then(function(doc) {
-        goodDocIndex._rev = doc._rev;
-        return db.put(goodDocIndex);
-    }).catch(function(err) {
-        if (err.status !== 404) {
-            console.log("Failing error: " + err);
-            return;
-        }
-        return db.put(goodDocIndex);
-    }).then(function() {
-        startTime = new Date().getTime();
-        return db.query('goodDocIndex');
-    }).then(function(results) {
-        console.log("Runtime: " + (new Date().getTime() - startTime));
-        var installs = 0;
-        var installsWithGyp = 0;
-        var repos = 0;
-        var git = {
-            gitRepos: 0,
-            gitReposStartingWithHttp: 0,
-            gitReposStartingWithGit: 0,
-            gitReposContainingGitHub: 0,
-            githubSitesWithGypInRoot: 0
-        };
-        Promise.all(results.rows.map(function(doc) {
-            return new Promise(function (resolve, reject) {
-                var value = doc.value;
-                if (value.scripts && value.scripts.install) {
-                    installs++;
-                    if (value.scripts.install.indexOf("gyp") > -1) {
-                        installsWithGyp++;
-                    }
-                }
-
-                if (value.repository) {
-                    repos++;
-                    if (value.repository.type === "git") {
-                        git.gitRepos++;
-                        if (value.repository.url) {
-                            if (value.repository.url.indexOf("http") === 0) {
-                                git.gitReposStartingWithHttp++;
-                            }
-                            if (value.repository.url.indexOf("git") === 0) {
-                                git.gitReposStartingWithGit++;
-                            }
-                            if (value.repository.url.indexOf("github") > -1) {
-                                git.gitReposContainingGitHub++;
-                                getFromGit(value.repository.url, resolve, reject);
-                            } else {
-                                resolve(false);
-                            }
-                        }
-                    }
-                }
-            });
-        })).then(function(promiseResults) {
-            promiseResults.forEach(function(value) {
-                if (value) {
-                    git.githubSitesWithGypInRoot++;
-                }
-            });
-            console.log("installs = " + installs + ", installs with gyp = " + installsWithGyp);
-            console.log(JSON.stringify(git));
-        });
-    }).catch(function(err) {
-        console.log(err);
-    });
-}
-
-designDoc(localNpmDB);
-
-function areWeDoneYet(startTime) {
-    http.get("http://localhost:5984/registry/_design/goodDocIndex/_info", function(res) {
-        var responseBody = "";
-        res.setEncoding('utf8');
-        res.on('data', function(chunk) {
-            responseBody += chunk;
-        });
-        res.on('end', function() {
-            var output = JSON.parse(responseBody);
-            if (output.view_index.updater_running) {
-                setTimeout(function () { areWeDoneYet(startTime);}, 100);
-            } else {
-                console.log("Runtime: " + (new Date().getTime() - startTime));
-            }
-        });
-    });
-
-}
-
-function couchDesignDoc() {
-    var db = new PouchDB("http://localhost:5984/registry/");
-    var startTime;
-    db.get('_design/goodDocIndex').then(function(doc) {
-        return Promise.reject("Go delete and clean up the bloody view!");
-    }).catch(function(err) {
-        if (err.status !== 404) {
-            return Promise.reject("Huh? " + err);
-        }
-        return db.put(goodDocIndex);
-    }).then(function() {
-        startTime = new Date().getTime();
-        return db.query('goodDocIndex', {limit: 10});
-    }).catch(function(err) {
-        if (err.status !== 400) {
-            console.log("Failing error, we should have gotten a timeout: " + err);
-            return;
-        }
-        areWeDoneYet(startTime);
-    }).then(function(results) {
-        console.log("Runtime: " + (new Date().getTime() - startTime));
-        console.log(results);
-    }).catch(function(err) {
-        console.log(err);
-    });
-}
+//compareGypDownloadsToDependencySum("engine.io");
 
 //Put a record in PouchDB to force use to use level DB
 //app.post('/slowtest', function(req, res) {
@@ -313,9 +121,7 @@ function couchDesignDoc() {
 //});
 
 
-app.use(morgan("combined"));
-app.use("/", require("express-pouchdb")(PouchDB));
-app.listen(3000);
+
 
 //require('http').globalAgent.maxSockets = 1;
 //

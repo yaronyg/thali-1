@@ -15,7 +15,10 @@
         "pouchdb": "*",
         "express-pouchdb": "*",
         "requestretry": "*",
-        "string": "*"
+        "string": "*",
+        "underscore": "*",
+        "request-promise": "*",
+        "immutable": "*"
     },
     "devDependencies": {
         "mocha":"*",

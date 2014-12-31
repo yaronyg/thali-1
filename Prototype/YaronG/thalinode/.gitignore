@@ -3,7 +3,6 @@ _users/
 _replicator/
 node_modules/
 pouch__all_dbs__/
-bin/
 config.json
 localNPM/
 localNPM-mrview-*
@@ -11,3 +10,6 @@ profile
 testDB*
 v8.log
 pouch__all_dbs__2/
+goodDocIndexDb/
+goodDocIndexDb.zip
+log.txt
